@@ -76,7 +76,9 @@ public sealed class Mod(TemplateTable templates, TradersTable traders, GlobalTab
             location.StaticContainers?.AddTransformer(loot=>loot is null?null:loot with
             {StaticWeapons=loot.StaticWeapons?.Select(p=>MigrateLoot(p)!).ToList()??[]});
         }
-        new BotWeaponPools(templates,rules).Enable();
+        var changedTemplates=patches.Select(p=>(MongoId)MigrationEngine.S(p!["_id"]))
+            .Concat(configs.Select(p=>(MongoId)p.Key)).ToHashSet();
+        new BotWeaponPools(templates,rules,changedTemplates).Enable();
         foreach(var warning in Engine.Warnings)logger.Warning(warning);
         logger.Info($"Registered {configs.Count} custom parts and {offerCount} trader offers with CommonLib; repaired {Engine.RepairedWeapons} database weapon assemblies.");
     }

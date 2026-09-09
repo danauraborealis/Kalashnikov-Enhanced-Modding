@@ -3,13 +3,15 @@ using HarmonyLib;
 using SPTarkov.Server.Core.Generators.Bot;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
+using SPTarkov.Server.Core.Models.Spt.Bots;
 using SPTarkov.Server.Core.Models.Spt.Tables;
 
 namespace KalashnikovEnhancedModding;
 
 /// <summary>Repairs the inventory actually handed to SPT, including pools supplied by later-loading mods.</summary>
-public sealed class BotWeaponPools(TemplateTable templates, JsonObject rules)
+public sealed class BotWeaponPools(TemplateTable templates, JsonObject rules, HashSet<MongoId> changedTemplates)
 {
+    private readonly HashSet<MongoId> _changedTemplates=changedTemplates;
     private readonly HashSet<MongoId> _weapons = rules["weaponIds"]!.AsArray()
         .Select(id => (MongoId)MigrationEngine.S(id)).ToHashSet();
     private static BotWeaponPools? _instance;
@@ -17,9 +19,30 @@ public sealed class BotWeaponPools(TemplateTable templates, JsonObject rules)
     public void Enable()
     {
         _instance = this;
-        new Harmony("com.baliston.kalashnikov-enhanced-modding.bot-pools").Patch(
+        var harmony=new Harmony("com.baliston.kalashnikov-enhanced-modding.bot-pools");
+        harmony.Patch(
             AccessTools.Method(typeof(BotWeaponGenerator), nameof(BotWeaponGenerator.GenerateWeaponByTpl)),
             prefix: new HarmonyMethod(typeof(BotWeaponPools), nameof(BeforeGenerate)));
+        harmony.Patch(
+            AccessTools.Method(typeof(BotEquipmentModGenerator), nameof(BotEquipmentModGenerator.GenerateModsForWeapon)),
+            prefix: new HarmonyMethod(typeof(BotWeaponPools), nameof(BeforeGenerateAttachments)));
+    }
+
+    private static bool BeforeGenerateAttachments(ref GenerateWeaponRequest request, ref List<Item> __result)
+    {
+        if (_instance is not { } instance || request.ParentTemplate is not { } parent
+            || !instance._changedTemplates.Contains(parent.Id) || request.ModPool is null || request.Weapon is not { } weapon) return true;
+        // Dynamic PMC choices can reach parts absent from the initial traversal. Repair the actual
+        // selected part at every recursion, including changed parts mounted on otherwise vanilla guns.
+        var inventory=instance.Prepare(parent.Id,new BotTypeInventory { Mods=request.ModPool });
+        request=request with { ModPool=inventory.Mods };
+        if (inventory.Mods.TryGetValue(parent.Id,out var pool) && pool.Count==0)
+        {
+            // A split part may no longer have any child sockets. SPT must not recurse into its old pool.
+            __result=weapon;
+            return false;
+        }
+        return true;
     }
 
     private static void BeforeGenerate(MongoId weaponTpl, ref BotTypeInventory botTemplateInventory)
@@ -54,8 +77,8 @@ public sealed class BotWeaponPools(TemplateTable templates, JsonObject rules)
         {
             if (!visited.Add(tpl) || !templates.Items.TryGetValue(tpl, out var item)) return;
             var slots = item.Properties?.Slots?.ToArray() ?? [];
-            if (slots.Length == 0) return;
             var source = pools.GetValueOrDefault(tpl);
+            if (slots.Length == 0 && !_changedTemplates.Contains(tpl)) return;
             var current = new Dictionary<string, HashSet<MongoId>>();
             // Cartridge/chamber pools are separate from attachment Slots.
             if (source is not null)

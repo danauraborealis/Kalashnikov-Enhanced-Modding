@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <ModVersion>4.1.1</ModVersion>
+    <ModVersion>4.1.2</ModVersion>
     <ModGuid>com.baliston.kalashnikov-enhanced-modding</ModGuid>
     <ModName>KalashnikovEnhancedModding</ModName>
     <ModAuthor>BALIST0N</ModAuthor>
