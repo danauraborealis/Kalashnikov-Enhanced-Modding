@@ -2,11 +2,14 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
-    <AssemblyName>KalashnikovEnhancedModding</AssemblyName><Version>$(ModVersion)</Version>
+    <AssemblyName>KalashnikovEnhancedModding</AssemblyName>
+    <RootNamespace>KalashnikovEnhancedModding</RootNamespace>
+    <Version>$(ModVersion)</Version>
     <Product>$(ModName)</Product>
     <Authors>$(ModAuthor)</Authors>
     <RepositoryUrl>$(ModSourceUrl)</RepositoryUrl>
   </PropertyGroup>
+
   <ItemGroup>
     <AssemblyMetadata Include="ModVersion" Value="$(ModVersion)" />
     <AssemblyMetadata Include="ModGuid" Value="$(ModGuid)" />
@@ -14,12 +17,60 @@
     <AssemblyMetadata Include="ModAuthor" Value="$(ModAuthor)" />
     <AssemblyMetadata Include="ModSourceUrl" Value="$(ModSourceUrl)" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <Reference Include="0Harmony"><HintPath>$(SptRoot)/0Harmony.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="SPTarkov.Server.Core"><HintPath>$(SptRoot)/SPTarkov.Server.Core.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="SPTarkov.Common"><HintPath>$(SptRoot)/SPTarkov.Common.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="SPTarkov.DI"><HintPath>$(SptRoot)/SPTarkov.DI.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="SemanticVersioning"><HintPath>$(SptRoot)/SemanticVersioning.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="WTT-ServerCommonLib"><HintPath>$(CommonLibPath)</HintPath><Private>false</Private></Reference>
   </ItemGroup>
-  <ItemGroup><Content Include="../ServerModFiles/db/**/*.json" Link="db/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>$(SptRoot)/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SPTarkov.Server.Core">
+      <HintPath>$(SptRoot)/SPTarkov.Server.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SPTarkov.Common">
+      <HintPath>$(SptRoot)/SPTarkov.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SPTarkov.DI">
+      <HintPath>$(SptRoot)/SPTarkov.DI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SPTarkov.Reflection">
+      <HintPath>$(SptRoot)/SPTarkov.Reflection.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SemanticVersioning">
+      <HintPath>$(SptRoot)/SemanticVersioning.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="WTT-ServerCommonLib">
+      <HintPath>$(CommonLibPath)</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="../ServerModFiles/db/**/*.json" Link="db/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" />
+  </ItemGroup>
+
+  <Target Name="CopyToSpt" AfterTargets="Build" Condition="'$(DeployToSpt)' == 'true'">
+    <PropertyGroup>
+      <ModOutputPath Condition="'$(ModOutputPath)' == ''">$(SptRoot)\user\mods\$(ModName)</ModOutputPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ResourceFiles Include="$(ProjectDir)..\ServerModFiles\**\*"
+                     Exclude="$(ProjectDir)..\ServerModFiles\bundles\masterkey_wip.bundle;$(ProjectDir)..\ServerModFiles\bundles\gasblock\gas_block_ak_custom_ak_cut.bundle;$(ProjectDir)..\ServerModFiles\bundles\gasblock\gas_block_ak_vs_vs_33c_wht_new.bundle;$(ProjectDir)..\ServerModFiles\bundles\handguards\handguard_pp-19-01_hartman_gurza_lower.bundle;$(ProjectDir)..\ServerModFiles\bundles\mount\mod_mount_rmp5_akmn.bundle" />
+    </ItemGroup>
+
+    <MakeDir Directories="$(ModOutputPath)" />
+
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModOutputPath)" />
+    <Copy SourceFiles="@(ResourceFiles)" DestinationFiles="@(ResourceFiles->'$(ModOutputPath)\%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
 </Project>

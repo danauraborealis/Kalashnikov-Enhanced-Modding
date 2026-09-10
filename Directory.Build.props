@@ -8,5 +8,6 @@
     <SptInstallPath Condition="'$(SptInstallPath)' == ''">D:\SPT41Dev</SptInstallPath>
     <SptRoot Condition="'$(SptRoot)' == ''">$(SptInstallPath)\SPT_Runtime</SptRoot>
     <CommonLibPath Condition="'$(CommonLibPath)' == ''">$(SptRoot)\user\mods\WTT-ServerCommonLib\WTT-ServerCommonLib.dll</CommonLibPath>
+    <DeployToSpt Condition="'$(DeployToSpt)' == ''">false</DeployToSpt>
   </PropertyGroup>
 </Project>
